@@ -1,3 +1,48 @@
+@media (max-width: 600px) {
+  #present-form {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    margin-bottom: 16px !important;
+  }
+  #present-form > div {
+    width: 100% !important;
+    max-width: 90vw !important;
+    height: 100px !important;
+  }
+  #present-form input[type="text"] {
+    width: 70vw !important;
+    left: 10vw !important;
+    font-size: 14px !important;
+    height: 50px !important;
+    top: 20px !important;
+  }
+  #present-form button {
+    width: 100%;
+    font-size: 16px;
+    height: 36px;
+  }
+  #presents-container {
+    min-height: 300px;
+    width: 100vw;
+    min-width: 0;
+    position: relative;
+    overflow-x: auto;
+    overflow-y: auto;
+  }
+  #presents-container > div {
+    width: 100px !important;
+    height: 100px !important;
+  }
+  #presents-container img {
+    width: 100px !important;
+    height: 100px !important;
+  }
+}
+body.christmas-bg {
+  background: url('/images/background.png') no-repeat center center fixed;
+  background-size: cover;
+}
 body {
   padding: 50px;
   font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
