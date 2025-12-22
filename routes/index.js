@@ -1,19 +1,3 @@
-// PATCH: Update note position
-router.patch('/api/presents/position', express.json(), function(req, res) {
-  const { idx, x, y } = req.body;
-  if (
-    typeof idx !== 'number' ||
-    typeof x !== 'number' ||
-    typeof y !== 'number' ||
-    !presents[idx]
-  ) {
-    return res.status(400).json({ error: 'Invalid index or coordinates' });
-  }
-  presents[idx].x = x;
-  presents[idx].y = y;
-  res.json({ success: true });
-});
-
 var express = require('express');
 var router = express.Router();
 
@@ -42,6 +26,22 @@ router.post('/api/presents', express.json(), function(req, res) {
   }
   presents.push({ note, type, x, y });
   res.status(201).json({ success: true });
+});
+
+// PATCH: Update note position
+router.patch('/api/presents/position', express.json(), function(req, res) {
+  const { idx, x, y } = req.body; 
+  if (
+    typeof idx !== 'number' ||
+    typeof x !== 'number' ||
+    typeof y !== 'number' ||
+    !presents[idx]
+  ) {
+    return res.status(400).json({ error: 'Invalid index or coordinates' });
+  }
+  presents[idx].x = x;
+  presents[idx].y = y;
+  res.json({ success: true });
 });
 
 module.exports = router;
