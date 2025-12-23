@@ -1,18 +1,15 @@
-<h1>{{title}}</h1>
-<p>Welcome to {{title}}</p>
+<h1>Welcome to the Virtual Gift Exchange!</h1>
 
+<div id="present-form">
+	<div style="position: relative;">
+		<img id="envelope" src="/images/envelope.png" alt="Envelope" />
+		<div id="note-wrapper"> 
+			<input type="text" id="note-input" placeholder="Leave a note..." maxlength="100">
+			<button id="add-note-btn" style="height: 40px;">Leave Note</button>
+		</div>
+	</div>
 
-<div id="present-form" style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
-	<div style="position: relative; width: 150px; height: 150px;">
-		<img src="/images/envelope.png" alt="Envelope" style="width: 100%; height: 100%; display: block;" />
-		<input type="text" id="note-input" placeholder="Leave a note..." maxlength="100"
-			style="position: absolute; top: 35px; left: 25px; width: 100px; height: 80px; border: none; background: transparent; text-align: center; color: #333; font-size: 16px; outline: none;" />
-	</div>
-	<div style="display: flex; flex-direction: column; gap: 8px;">
-		<button id="add-note-btn" style="height: 40px;">Leave Note</button>
-	</div>
 </div>
 
-<h2>Presents</h2>
+{{!-- <h2>Presents</h2> --}}
 <div id="presents-container" style="display: flex; flex-wrap: wrap; gap: 16px;"></div>
-

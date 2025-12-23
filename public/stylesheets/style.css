@@ -1,4 +1,4 @@
-@media (max-width: 600px) {
+/* 
   #present-form {
     flex-direction: column !important;
     align-items: flex-start !important;
@@ -6,9 +6,6 @@
     margin-bottom: 16px !important;
   }
   #present-form > div {
-    width: 100% !important;
-    max-width: 90vw !important;
-    height: 100px !important;
   }
   #present-form input[type="text"] {
     width: 70vw !important;
@@ -37,8 +34,8 @@
   #presents-container img {
     width: 100px !important;
     height: 100px !important;
-  }
-}
+  } */
+
 body.christmas-bg {
   background: url('/images/background.png') no-repeat center center fixed;
   background-size: cover;
@@ -50,4 +47,26 @@ body {
 
 a {
   color: #00B7FF;
+}
+h1 {
+  display: none;
+}
+
+#note-wrapper {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%,-50%);
+}
+#envelope {
+  width: 50%;
+  height: auto;
+  display: block;
+  margin: auto;
+}
+
+#add-note-btn {
+  display: block;
+  margin: auto;
+  margin-top: 30px;
 }

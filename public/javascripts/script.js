@@ -20,13 +20,16 @@ function renderPresents(presents) {
 		// Only envelope/note is supported now
 		inner += `
 			<div style="position: relative; width: 150px; height: 150px;">
-				<img src="/images/envelope.png" alt="Envelope" style="width: 100%; height: 100%; display: block;" />
+				<img src="/images/present${(idx+1)%3}.png" alt="Present" style="width: 100%; height: 100%; display: block;" />
 				<div style="position: absolute; top: 35px; left: 25px; width: 100px; height: 80px; display: flex; align-items: center; justify-content: center; text-align: center; color: #333; font-size: 16px; overflow-wrap: break-word; word-break: break-word; pointer-events: none;">
-					${present.note}
+					
 				</div>
 			</div>
 		`;
 		div.innerHTML = inner;
+		div.addEventListener('click', function() {
+			alert(present.note);
+		});
 		makeDraggable(div, idx, present);
 		container.appendChild(div);
 	});
