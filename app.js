@@ -1,8 +1,16 @@
+require('dotenv').config();
 var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
+var mongoose = require('mongoose');
+
+// Connect to MongoDB using the environment variable from .env
+const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/finalproject';
+mongoose.connect(mongoUri)
+  .then(() => console.log('MongoDB connected'))
+  .catch((err) => console.error('MongoDB connection error:', err));
 
 var indexRouter = require('./routes/index');
 
