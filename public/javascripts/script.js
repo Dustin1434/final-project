@@ -9,19 +9,20 @@ function renderPresents(presents) {
 	const container = document.getElementById('presents-container');
 	container.innerHTML = '';
 	container.style.position = 'relative';
-	presents.forEach((present) => {
+	presents.forEach((present, idx) => {
 		const div = document.createElement('div');
 		div.style.position = 'absolute';
 		div.style.left = (present.x || 100) + 'px';
 		div.style.top = (present.y || 100) + 'px';
 		div.style.cursor = 'grab';
-		div.setAttribute('data-id', present._id);
+		div.setAttribute('data-idx', idx);
 		let inner = '';
+		// Only envelope/note is supported now
 		inner += `
 			<div style="position: relative; width: 150px; height: 150px;">
-				<img src="/images/envelope.png" alt="Envelope" style="width: 100%; height: 100%; display: block;" />
+				<img src="/images/present${(idx+1)%3}.png" alt="Present" style="width: 100%; height: 100%; display: block;" />
 				<div style="position: absolute; top: 35px; left: 25px; width: 100px; height: 80px; display: flex; align-items: center; justify-content: center; text-align: center; color: #333; font-size: 16px; overflow-wrap: break-word; word-break: break-word; pointer-events: none;">
-					${present.note}
+					
 				</div>
 			</div>
 		`;
@@ -29,12 +30,12 @@ function renderPresents(presents) {
 		div.addEventListener('click', function() {
 			alert(present.note);
 		});
-		makeDraggable(div, present._id, present);
+		makeDraggable(div, idx, present);
 		container.appendChild(div);
 	});
 }
 
-function makeDraggable(element, id, present) {
+function makeDraggable(element, idx, present) {
 	let offsetX, offsetY, startX, startY;
 	let dragging = false;
 
@@ -65,17 +66,17 @@ function makeDraggable(element, id, present) {
 		// Save new position to backend
 		const newX = element.offsetLeft;
 		const newY = element.offsetTop;
-		await updateNotePosition(id, newX, newY);
+		await updateNotePosition(idx, newX, newY);
 		element.style.zIndex = '';
 	});
 }
 
-async function updateNotePosition(id, x, y) {
+async function updateNotePosition(idx, x, y) {
 	// Send PATCH to backend to update position
 	await fetch('/api/presents/position', {
 		method: 'PATCH',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ id, x, y })
+		body: JSON.stringify({ idx, x, y })
 	});
 }
 
