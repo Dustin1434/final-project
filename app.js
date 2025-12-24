@@ -4,13 +4,12 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-var mongoose = require('mongoose');
 
-// Connect to MongoDB using the environment variable from .env
-const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/finalproject';
-mongoose.connect(mongoUri)
+// Serverless-friendly Mongoose connector (caches connection)
+const db = require('./lib/db');
+db.connect()
   .then(() => console.log('MongoDB connected'))
-  .catch((err) => console.error('MongoDB connection error:', err));
+  .catch((err) => console.error('MongoDB connection error:', err && err.message));
 
 var indexRouter = require('./routes/index');
 
