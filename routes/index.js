@@ -94,3 +94,14 @@ router.patch('/api/presents/position', express.json(), async function(req, res) 
 });
 
 module.exports = router;
+
+// Debug endpoint (useful on deployments) - shows mongoose connection state and fallback size
+// GET /api/debug
+router.get('/api/debug', function(req, res) {
+  const state = mongoose.connection ? mongoose.connection.readyState : 0;
+  res.json({
+    mongooseState: state, // 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
+    memoryNotes: memoryNotes.length,
+    usingFallback: (state !== 1)
+  });
+});
