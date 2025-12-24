@@ -5,11 +5,9 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 
-// Serverless-friendly Mongoose connector (caches connection)
+// Use serverless-friendly mongoose connector
 const db = require('./lib/db');
-db.connect()
-  .then(() => console.log('MongoDB connected'))
-  .catch((err) => console.error('MongoDB connection error:', err && err.message));
+db.connect().then(() => console.log('MongoDB connected')).catch((err) => console.error('MongoDB connection error:', err));
 
 var indexRouter = require('./routes/index');
 
