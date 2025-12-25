@@ -64,8 +64,27 @@ document.addEventListener('DOMContentLoaded', () => {
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ note, type: 'note', x, y })
 			});
-		noteInput.value = '';
-		fetchPresents();
+			noteInput.value = '';
+			// Inspect server response/state so user can see if fallback was used
+			const postRes = await fetch('/api/presents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ note, type: 'note', x, y }) });
+			let postJson = {};
+			try { postJson = await postRes.json(); } catch (e) { console.warn('Could not parse POST response JSON', e); }
+			if (postJson && postJson.fallback) {
+				alert('Note saved to a temporary fallback (not persisted). Please check deployment logs or retry later.');
+			}
+			// Check runtime debug info (will show mongooseState if accessible)
+			try {
+				const dbg = await fetch('/api/debug');
+				if (dbg.ok) {
+					const js = await dbg.json();
+					console.log('Runtime debug:', js);
+				} else {
+					console.log('Runtime debug request returned', dbg.status);
+				}
+			} catch (e) {
+				console.warn('Could not reach /api/debug:', e && e.message);
+			}
+			fetchPresents();
 	});
 });
 
