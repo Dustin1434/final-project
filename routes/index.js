@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
+const db = require('../lib/db');
 
 // In-memory fallback store used when MongoDB is not available (useful for Vercel without env set)
 const memoryNotes = [];
@@ -33,6 +34,12 @@ router.get('/', function(req, res, next) {
 // API: Get all notes
 router.get('/api/presents', async function(req, res) {
   try {
+    // Ensure we attempt a DB connect for this invocation (helps serverless cold starts)
+    try {
+      await db.connect();
+    } catch (e) {
+      console.warn(new Date().toISOString(), 'GET /api/presents - DB connect attempt failed:', e && e.message);
+    }
     if (mongoose.connection && mongoose.connection.readyState === 1) {
       const notes = await Note.find();
       console.log(new Date().toISOString(), 'GET /api/presents - returning', notes.length, 'records from MongoDB');
@@ -57,11 +64,18 @@ router.post('/api/presents', express.json(), async function(req, res) {
   }
   // Try DB first; if it's not connected, use in-memory fallback
   try {
+    // Ensure a DB connect is attempted for this invocation
+    try {
+      await db.connect();
+    } catch (e) {
+      console.warn(new Date().toISOString(), 'POST /api/presents - DB connect attempt failed:', e && e.message);
+    }
     if (mongoose.connection && mongoose.connection.readyState === 1) {
       const newNote = new Note({ note, type, x, y });
       await newNote.save();
       console.log(new Date().toISOString(), 'POST /api/presents - saved to MongoDB');
-      return res.status(201).json({ success: true });
+      const state = mongoose.connection ? mongoose.connection.readyState : 'unknown';
+      return res.status(201).json({ success: true, mongooseState: state });
     }
   } catch (err) {
     console.error(new Date().toISOString(),'Mongo write failed, falling back to memory store:', err && err.message);
@@ -70,7 +84,8 @@ router.post('/api/presents', express.json(), async function(req, res) {
   const mem = { _id: generateId(), note, type, x, y };
   memoryNotes.push(mem);
   console.log(new Date().toISOString(), 'POST /api/presents - saved to memory fallback');
-  res.status(201).json({ success: true, fallback: true });
+  const state = mongoose.connection ? mongoose.connection.readyState : 0;
+  res.status(201).json({ success: true, fallback: true, mongooseState: state });
 });
 
 // PATCH: Update note position by _id
@@ -80,6 +95,12 @@ router.patch('/api/presents/position', express.json(), async function(req, res) 
     return res.status(400).json({ error: 'Invalid id or coordinates' });
   }
   try {
+    // Try to connect before updating (serverless cold start guard)
+    try {
+      await db.connect();
+    } catch (e) {
+      console.warn(new Date().toISOString(), 'PATCH /api/presents/position - DB connect attempt failed:', e && e.message);
+    }
     if (mongoose.connection && mongoose.connection.readyState === 1) {
       await Note.findByIdAndUpdate(id, { x, y });
       return res.json({ success: true });
