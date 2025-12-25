@@ -106,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				if (postJson && postJson.fallback) {
 					alert('Note saved to a temporary fallback (not persisted). Please check deployment logs or retry later.');
 				}
+
 				// Check runtime debug info (will show mongooseState if accessible)
 				try {
 					const dbg = await fetch('/api/debug');
@@ -118,7 +119,29 @@ document.addEventListener('DOMContentLoaded', () => {
 				} catch (e) {
 					console.warn('Could not reach /api/debug:', e && e.message);
 				}
-				await fetchPresents();
+
+				// Wait until the new note appears in /api/presents (poll a few times)
+				const maxAttempts = 6;
+				let confirmed = false;
+				for (let attempt = 0; attempt < maxAttempts; attempt++) {
+					// small backoff: immediate first check, then 500ms, 1000ms...
+					if (attempt > 0) await new Promise(r => setTimeout(r, 250 * attempt));
+					try {
+						const listRes = await fetch('/api/presents');
+						if (!listRes.ok) continue;
+						const list = await listRes.json();
+						// look for a note matching text (and optionally coordinates)
+						if (Array.isArray(list) && list.some(p => p.note === note)) {
+							confirmed = true;
+							break;
+						}
+					} catch (e) {
+						console.warn('Error polling /api/presents for confirmation:', e && e.message);
+					}
+				}
+				if (!confirmed) {
+					console.warn('Could not confirm new note appeared after attempts; re-enabling UI.');
+				}
 			} finally {
 				addBtn.disabled = false;
 				addBtn.style.pointerEvents = '';
