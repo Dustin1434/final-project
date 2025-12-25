@@ -12,13 +12,20 @@ function renderPresents(presents) {
 	presents.forEach((present, idx) => {
 		const div = document.createElement('div');
 		div.style.position = 'absolute';
-		div.style.left = (present.x || 100) + 'px';
-		div.style.top = (present.y || 100) + 'px';
+		// div.style.left = (present.x || 100) + 'px';
+		// div.style.top = (present.y || 100) + 'px';
+	
+		const presentHeight = 150; // fixed height of present display
+		const presentWidth = 150;
+
+		div.style.left = Math.random() * (container.clientWidth - presentWidth) + 'px';
+		div.style.top = Math.random() * (container.clientHeight - presentHeight) + 'px';
+
 		div.setAttribute('data-idx', idx);
 		let inner = '';
 		// Only envelope/note is supported now
 		inner += `
-			<div style="position: relative; width: 150px; height: 150px;">
+			<div style="position: relative; width: ${presentWidth}px; height: ${presentHeight}px;">
 				<img src="/images/present${(idx+1)%3}.png" alt="Present" style="width: 100%; height: 100%; display: block;" />
 				<div style="position: absolute; top: 35px; left: 25px; width: 100px; height: 80px; display: flex; align-items: center; justify-content: center; text-align: center; color: #333; font-size: 16px; overflow-wrap: break-word; word-break: break-word; pointer-events: none;">
 					
