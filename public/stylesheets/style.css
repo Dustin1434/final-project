@@ -36,9 +36,34 @@
     height: 100px !important;
   } */
 
+/* Use a fixed-position pseudo-element for a cross-browser "fixed" wallpaper.
+   Some mobile browsers ignore `background-attachment: fixed`, so the pseudo-element
+   ensures the wallpaper stays locked to the viewport and doesn't scroll with content. */
+html, body {
+  height: 100%;
+  /* Prevent scroll chaining / overscroll from moving background in supporting browsers */
+  overscroll-behavior: none;
+}
 body.christmas-bg {
-  background: url('/images/background.png') no-repeat center center fixed;
+  position: relative;
+}
+body.christmas-bg::before {
+  content: "";
+  position: fixed;
+  inset: 0; /* top:0; right:0; bottom:0; left:0 */
+  background-image: url('/images/background.png');
+  background-repeat: no-repeat;
+  background-position: center center;
   background-size: cover;
+  z-index: -1; /* sit behind page content */
+  pointer-events: none;
+}
+
+/* Fallback: some mobile browsers still ignore fixed backgrounds; keep this as a fallback
+   and make sure background-attachment is fixed when possible. */
+body.christmas-bg {
+  -webkit-background-attachment: fixed;
+  background-attachment: fixed;
 }
 body {
   padding: 50px;
