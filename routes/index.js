@@ -86,6 +86,16 @@ router.post('/api/presents', express.json(), async function(req, res) {
   // Try Data API first (if configured), then DB, else fallback
   if (dataApi) {
     try {
+      // Server-side dedupe: check for an existing note with same text and coords
+      try {
+        const found = await dataApi.find({ note: note, x: x, y: y });
+        if (Array.isArray(found) && found.length > 0) {
+          console.log(new Date().toISOString(), 'POST /api/presents - duplicate detected via Data API, skipping insert');
+          return res.status(200).json({ success: true, duplicate: true, dbDriver: 'dataApi', existingCount: found.length });
+        }
+      } catch (e) {
+        console.warn(new Date().toISOString(), 'POST /api/presents - Data API dedupe check failed:', e && e.message);
+      }
       const doc = { note, type, x, y };
       const insertedId = await dataApi.insertOne(doc);
       console.log(new Date().toISOString(), 'POST /api/presents - saved via Data API, id=', insertedId);
@@ -107,11 +117,21 @@ router.post('/api/presents', express.json(), async function(req, res) {
       console.warn(new Date().toISOString(), 'POST /api/presents - DB connect attempt failed:', connectError);
     }
     if (mongoose.connection && mongoose.connection.readyState === 1) {
+      // Server-side dedupe for mongoose path
+      try {
+        const exists = await Note.findOne({ note: note, x: x, y: y }).lean();
+        if (exists) {
+          console.log(new Date().toISOString(), 'POST /api/presents - duplicate detected via mongoose, skipping insert, id=', exists._id);
+          return res.status(200).json({ success: true, duplicate: true, mongooseState: mongoose.connection.readyState, existingId: exists._id });
+        }
+      } catch (e) {
+        console.warn(new Date().toISOString(), 'POST /api/presents - mongoose dedupe check failed:', e && e.message);
+      }
       const newNote = new Note({ note, type, x, y });
-      await newNote.save();
-      console.log(new Date().toISOString(), 'POST /api/presents - saved to MongoDB');
+      const saved = await newNote.save();
+      console.log(new Date().toISOString(), 'POST /api/presents - saved to MongoDB, id=', saved._id);
       const state = mongoose.connection ? mongoose.connection.readyState : 'unknown';
-      return res.status(201).json({ success: true, mongooseState: state });
+      return res.status(201).json({ success: true, mongooseState: state, insertedId: saved._id });
     }
   } catch (err) {
     console.error(new Date().toISOString(),'Mongo write failed, falling back to memory store:', err && err.message);
