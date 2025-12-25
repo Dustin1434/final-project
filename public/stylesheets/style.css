@@ -95,3 +95,12 @@ h1 {
   margin: auto;
   margin-top: 30px;
 }
+
+/* Prevent present images from being dragged by the browser (website mode) */
+#presents-container img {
+  -webkit-user-drag: none;
+  user-drag: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}

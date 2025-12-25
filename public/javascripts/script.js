@@ -26,6 +26,16 @@ function renderPresents(presents) {
 			</div>
 		`;
 		div.innerHTML = inner;
+
+		// Make the present image non-draggable and guard against default drag behavior
+		const img = div.querySelector('img');
+		if (img) {
+			img.draggable = false;
+			img.ondragstart = () => false;
+			// Extra inline style fallback for browsers that honor these CSS properties
+			img.style.webkitUserDrag = 'none';
+			img.style.userSelect = 'none';
+		}
 		div.addEventListener('click', function() {
 			alert(present.note);
 		});
