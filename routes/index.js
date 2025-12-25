@@ -3,6 +3,16 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const db = require('../lib/db');
+let dataApi = null;
+try {
+  // Optional: use Atlas Data API when configured (no IP whitelist required)
+  if (process.env.ATLAS_DATA_API_URL && process.env.ATLAS_DATA_API_KEY) {
+    dataApi = require('../lib/dataApi');
+    console.log(new Date().toISOString(), 'Routes: Atlas Data API enabled');
+  }
+} catch (e) {
+  console.warn(new Date().toISOString(), 'Routes: failed to load dataApi:', e && e.message);
+}
 
 // In-memory fallback store used when MongoDB is not available (useful for Vercel without env set)
 const memoryNotes = [];
@@ -34,6 +44,17 @@ router.get('/', function(req, res, next) {
 // API: Get all notes
 router.get('/api/presents', async function(req, res) {
   try {
+    // Prefer Data API if configured (avoids IP whitelist issues)
+    if (dataApi) {
+      try {
+        const docs = await dataApi.findAll();
+        console.log(new Date().toISOString(), 'GET /api/presents - returning', docs.length, 'records from Data API');
+        return res.json(docs);
+      } catch (e) {
+        console.warn(new Date().toISOString(), 'GET /api/presents - Data API read failed:', e && e.message);
+        // fall through to try mongoose connector
+      }
+    }
     // Ensure we attempt a DB connect for this invocation (helps serverless cold starts)
     try {
       await db.connect();
@@ -62,6 +83,19 @@ router.post('/api/presents', express.json(), async function(req, res) {
   if (!note) {
     return res.status(400).json({ error: 'Note is required' });
   }
+  // Try Data API first (if configured), then DB, else fallback
+  if (dataApi) {
+    try {
+      const doc = { note, type, x, y };
+      const insertedId = await dataApi.insertOne(doc);
+      console.log(new Date().toISOString(), 'POST /api/presents - saved via Data API, id=', insertedId);
+      return res.status(201).json({ success: true, dbDriver: 'dataApi', insertedId });
+    } catch (e) {
+      console.warn(new Date().toISOString(), 'POST /api/presents - Data API write failed:', e && e.message);
+      // fall through to try mongoose connector
+    }
+  }
+
   // Try DB first; if it's not connected, use in-memory fallback
   let connectError = null;
   try {
@@ -100,6 +134,21 @@ router.patch('/api/presents/position', express.json(), async function(req, res) 
     return res.status(400).json({ error: 'Invalid id or coordinates' });
   }
   try {
+    // Try Data API update first
+    if (dataApi) {
+      try {
+        // Data API expects extended JSON for filter when using ObjectId
+        const filter = { _id: { $oid: id } };
+        const update = { $set: { x, y } };
+        await dataApi.updateOne(filter, update);
+        console.log(new Date().toISOString(), 'PATCH /api/presents/position - updated via Data API, id=', id);
+        return res.json({ success: true, dbDriver: 'dataApi' });
+      } catch (e) {
+        console.warn(new Date().toISOString(), 'PATCH /api/presents/position - Data API update failed:', e && e.message);
+        // fall through to mongoose
+      }
+    }
+
     // Try to connect before updating (serverless cold start guard)
     try {
       await db.connect();
