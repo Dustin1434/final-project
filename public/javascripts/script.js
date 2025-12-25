@@ -64,11 +64,24 @@ async function updateNotePosition(idx, x, y) {
 document.addEventListener('DOMContentLoaded', () => {
 	fetchPresents();
 	// Removed 'Leave Present' button logic
-	document.getElementById('add-note-btn').addEventListener('click', async () => {
+	let isSubmitting = false;
+	const addBtnEl = document.getElementById('add-note-btn');
+	const noteInputEl = document.getElementById('note-input');
+	// Prevent Enter from submitting/creating duplicates
+	noteInputEl.addEventListener('keydown', (e) => {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+		}
+	});
+
+	addBtnEl.addEventListener('click', async () => {
+		if (isSubmitting) return; // guard against double clicks
+		isSubmitting = true;
 		const noteInput = document.getElementById('note-input');
 		const note = noteInput.value.trim();
 		if (!note) {
 			alert('Please enter a note.');
+			isSubmitting = false;
 			return;
 		}
 			// Compute a non-overlapping fixed position for the new note
@@ -76,9 +89,10 @@ document.addEventListener('DOMContentLoaded', () => {
 			const presentsRes = await fetch('/api/presents');
 			const existing = await presentsRes.json();
 			const { x, y } = computeFreePosition(container, existing);
-			const addBtn = document.getElementById('add-note-btn');
+			const addBtn = addBtnEl;
 			const origBtnText = addBtn.innerText;
 			addBtn.disabled = true;
+			addBtn.style.pointerEvents = 'none';
 			addBtn.innerText = 'Saving...';
 			noteInput.disabled = true;
 			let postJson = {};
@@ -107,9 +121,11 @@ document.addEventListener('DOMContentLoaded', () => {
 				await fetchPresents();
 			} finally {
 				addBtn.disabled = false;
+				addBtn.style.pointerEvents = '';
 				addBtn.innerText = origBtnText;
 				noteInput.disabled = false;
 				noteInput.value = '';
+				isSubmitting = false;
 			}
             
 	});
