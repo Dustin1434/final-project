@@ -14,7 +14,6 @@ function renderPresents(presents) {
 		div.style.position = 'absolute';
 		div.style.left = (present.x || 100) + 'px';
 		div.style.top = (present.y || 100) + 'px';
-		div.style.cursor = 'grab';
 		div.setAttribute('data-idx', idx);
 		let inner = '';
 		// Only envelope/note is supported now
@@ -30,46 +29,10 @@ function renderPresents(presents) {
 		div.addEventListener('click', function() {
 			alert(present.note);
 		});
-		makeDraggable(div, idx, present);
 		container.appendChild(div);
 	});
 }
-
-function makeDraggable(element, idx, present) {
-	let offsetX, offsetY, startX, startY;
-	let dragging = false;
-
-	element.addEventListener('pointerdown', function(e) {
-		dragging = true;
-		startX = e.clientX;
-		startY = e.clientY;
-		offsetX = element.offsetLeft;
-		offsetY = element.offsetTop;
-		element.setPointerCapture(e.pointerId);
-		element.style.zIndex = 1000;
-		document.body.style.userSelect = 'none';
-	});
-
-	element.addEventListener('pointermove', function(e) {
-		if (!dragging) return;
-		let dx = e.clientX - startX;
-		let dy = e.clientY - startY;
-		element.style.left = (offsetX + dx) + 'px';
-		element.style.top = (offsetY + dy) + 'px';
-	});
-
-	element.addEventListener('pointerup', async function(e) {
-		if (!dragging) return;
-		dragging = false;
-		element.releasePointerCapture(e.pointerId);
-		document.body.style.userSelect = '';
-		// Save new position to backend
-		const newX = element.offsetLeft;
-		const newY = element.offsetTop;
-		await updateNotePosition(idx, newX, newY);
-		element.style.zIndex = '';
-	});
-}
+// Notes are intentionally non-draggable; positions are fixed by the layout logic.
 
 async function updateNotePosition(idx, x, y) {
 	// Send PATCH to backend to update position
@@ -91,12 +54,59 @@ document.addEventListener('DOMContentLoaded', () => {
 			alert('Please enter a note.');
 			return;
 		}
-		await fetch('/api/presents', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ note, type: 'note' })
-		});
+			// Compute a non-overlapping fixed position for the new note
+			const container = document.getElementById('presents-container');
+			const presentsRes = await fetch('/api/presents');
+			const existing = await presentsRes.json();
+			const { x, y } = computeFreePosition(container, existing);
+			await fetch('/api/presents', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ note, type: 'note', x, y })
+			});
 		noteInput.value = '';
 		fetchPresents();
 	});
 });
+
+// Compute a free grid-based position inside the container that doesn't overlap existing presents
+function computeFreePosition(container, existing) {
+	const padding = 20; // margin around each present
+	const presentW = 150; // present display size (matches render)
+	const presentH = 150;
+	const cellW = presentW + padding;
+	const cellH = presentH + padding;
+	const width = Math.max(container.clientWidth, window.innerWidth);
+	const height = Math.max(container.clientHeight, window.innerHeight);
+	const cols = Math.max(1, Math.floor(width / cellW));
+	const rows = Math.max(1, Math.floor(height / cellH));
+
+	// Helper to check overlap
+	function overlaps(x1, y1) {
+		for (let p of existing) {
+			const px = (p.x || 0);
+			const py = (p.y || 0);
+			if (Math.abs(px - x1) < presentW && Math.abs(py - y1) < presentH) return true;
+		}
+		return false;
+	}
+
+	// Try grid positions first
+	for (let r = 0; r < rows; r++) {
+		for (let c = 0; c < cols; c++) {
+			const x = Math.floor((c * cellW) + padding/2);
+			const y = Math.floor((r * cellH) + padding/2);
+			if (!overlaps(x, y)) return { x, y };
+		}
+	}
+
+	// Fallback: random positions until one fits (avoids infinite loops)
+	for (let i = 0; i < 50; i++) {
+		const x = Math.floor(Math.random() * Math.max(50, width - presentW));
+		const y = Math.floor(Math.random() * Math.max(50, height - presentH));
+		if (!overlaps(x, y)) return { x, y };
+	}
+
+	// Last resort, return 100,100
+	return { x: 100, y: 100 };
+}
