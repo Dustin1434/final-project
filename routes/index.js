@@ -25,7 +25,7 @@ const noteSchema = new mongoose.Schema({
   type: { type: String, default: 'note' },
   x: { type: Number, default: 100 },
   y: { type: Number, default: 100 }
-});
+}, { timestamps: true });
 let Note;
 try {
   // Only register the model if mongoose exists
@@ -88,15 +88,24 @@ router.post('/api/presents', express.json(), async function(req, res) {
     try {
       // Server-side dedupe: check for an existing note with same text and coords
       try {
-        const found = await dataApi.find({ note: note, x: x, y: y });
+        // Find recent documents with same note text
+        const found = await dataApi.find({ note: note });
         if (Array.isArray(found) && found.length > 0) {
-          console.log(new Date().toISOString(), 'POST /api/presents - duplicate detected via Data API, skipping insert');
-          return res.status(200).json({ success: true, duplicate: true, dbDriver: 'dataApi', existingCount: found.length });
+          const now = Date.now();
+          const windowMs = 10000; // 10 seconds
+          const recent = found.filter(p => {
+            const t = p.createdAt ? Date.parse(p.createdAt) : 0;
+            return (now - t) <= windowMs;
+          });
+          if (recent.length > 0) {
+            console.log(new Date().toISOString(), 'POST /api/presents - duplicate detected via Data API (time window), skipping insert');
+            return res.status(200).json({ success: true, duplicate: true, dbDriver: 'dataApi', existingCount: recent.length });
+          }
         }
       } catch (e) {
         console.warn(new Date().toISOString(), 'POST /api/presents - Data API dedupe check failed:', e && e.message);
       }
-      const doc = { note, type, x, y };
+      const doc = { note, type, x, y, createdAt: new Date().toISOString() };
       const insertedId = await dataApi.insertOne(doc);
       console.log(new Date().toISOString(), 'POST /api/presents - saved via Data API, id=', insertedId);
       return res.status(201).json({ success: true, dbDriver: 'dataApi', insertedId });
@@ -119,10 +128,16 @@ router.post('/api/presents', express.json(), async function(req, res) {
     if (mongoose.connection && mongoose.connection.readyState === 1) {
       // Server-side dedupe for mongoose path
       try {
-        const exists = await Note.findOne({ note: note, x: x, y: y }).lean();
-        if (exists) {
-          console.log(new Date().toISOString(), 'POST /api/presents - duplicate detected via mongoose, skipping insert, id=', exists._id);
-          return res.status(200).json({ success: true, duplicate: true, mongooseState: mongoose.connection.readyState, existingId: exists._id });
+        // Mongoose dedupe: check recent entries with same note text
+        const recentDoc = await Note.findOne({ note: note }).sort({ createdAt: -1 }).lean();
+        if (recentDoc) {
+          const now = Date.now();
+          const windowMs = 10000; // 10 seconds
+          const t = recentDoc.createdAt ? new Date(recentDoc.createdAt).getTime() : 0;
+          if ((now - t) <= windowMs) {
+            console.log(new Date().toISOString(), 'POST /api/presents - duplicate detected via mongoose (time window), skipping insert, id=', recentDoc._id);
+            return res.status(200).json({ success: true, duplicate: true, mongooseState: mongoose.connection.readyState, existingId: recentDoc._id });
+          }
         }
       } catch (e) {
         console.warn(new Date().toISOString(), 'POST /api/presents - mongoose dedupe check failed:', e && e.message);
