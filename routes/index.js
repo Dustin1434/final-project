@@ -63,12 +63,14 @@ router.post('/api/presents', express.json(), async function(req, res) {
     return res.status(400).json({ error: 'Note is required' });
   }
   // Try DB first; if it's not connected, use in-memory fallback
+  let connectError = null;
   try {
     // Ensure a DB connect is attempted for this invocation
     try {
       await db.connect();
     } catch (e) {
-      console.warn(new Date().toISOString(), 'POST /api/presents - DB connect attempt failed:', e && e.message);
+      connectError = e && (e.message || String(e));
+      console.warn(new Date().toISOString(), 'POST /api/presents - DB connect attempt failed:', connectError);
     }
     if (mongoose.connection && mongoose.connection.readyState === 1) {
       const newNote = new Note({ note, type, x, y });
@@ -79,13 +81,16 @@ router.post('/api/presents', express.json(), async function(req, res) {
     }
   } catch (err) {
     console.error(new Date().toISOString(),'Mongo write failed, falling back to memory store:', err && err.message);
+    if (!connectError) connectError = err && (err.message || String(err));
   }
   // Fallback: save to in-memory array
   const mem = { _id: generateId(), note, type, x, y };
   memoryNotes.push(mem);
   console.log(new Date().toISOString(), 'POST /api/presents - saved to memory fallback');
   const state = mongoose.connection ? mongoose.connection.readyState : 0;
-  res.status(201).json({ success: true, fallback: true, mongooseState: state });
+  const resp = { success: true, fallback: true, mongooseState: state };
+  if (connectError) resp.dbError = connectError;
+  res.status(201).json(resp);
 });
 
 // PATCH: Update note position by _id
