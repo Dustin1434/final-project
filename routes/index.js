@@ -35,12 +35,14 @@ router.get('/api/presents', async function(req, res) {
   try {
     if (mongoose.connection && mongoose.connection.readyState === 1) {
       const notes = await Note.find();
+      console.log(new Date().toISOString(), 'GET /api/presents - returning', notes.length, 'records from MongoDB');
       return res.json(notes);
     }
   } catch (err) {
-    console.error('Mongo read failed, falling back to memory store:', err && err.message);
+    console.error(new Date().toISOString(),'Mongo read failed, falling back to memory store:', err && err.message);
   }
   // Fallback to memory
+  console.log(new Date().toISOString(), 'GET /api/presents - returning', memoryNotes.length, 'records from memory fallback');
   res.json(memoryNotes);
 });
 
@@ -58,14 +60,16 @@ router.post('/api/presents', express.json(), async function(req, res) {
     if (mongoose.connection && mongoose.connection.readyState === 1) {
       const newNote = new Note({ note, type, x, y });
       await newNote.save();
+      console.log(new Date().toISOString(), 'POST /api/presents - saved to MongoDB');
       return res.status(201).json({ success: true });
     }
   } catch (err) {
-    console.error('Mongo write failed, falling back to memory store:', err && err.message);
+    console.error(new Date().toISOString(),'Mongo write failed, falling back to memory store:', err && err.message);
   }
   // Fallback: save to in-memory array
   const mem = { _id: generateId(), note, type, x, y };
   memoryNotes.push(mem);
+  console.log(new Date().toISOString(), 'POST /api/presents - saved to memory fallback');
   res.status(201).json({ success: true, fallback: true });
 });
 
@@ -90,18 +94,20 @@ router.patch('/api/presents/position', express.json(), async function(req, res) 
   }
   memoryNotes[idx].x = x;
   memoryNotes[idx].y = y;
+  console.log(new Date().toISOString(), 'PATCH /api/presents/position - updated in memory fallback, id=', id);
   res.json({ success: true, fallback: true });
 });
-
-module.exports = router;
 
 // Debug endpoint (useful on deployments) - shows mongoose connection state and fallback size
 // GET /api/debug
 router.get('/api/debug', function(req, res) {
   const state = mongoose.connection ? mongoose.connection.readyState : 0;
+  console.log(new Date().toISOString(), '/api/debug - mongooseState=', state, 'memoryNotes=', memoryNotes.length);
   res.json({
     mongooseState: state, // 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
     memoryNotes: memoryNotes.length,
     usingFallback: (state !== 1)
   });
 });
+
+module.exports = router;
